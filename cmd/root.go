@@ -34,8 +34,7 @@ var cfgFile string
 
 var rootCmd = &cobra.Command{
 	Use:   "mac-cleanup",
-	Short: "🗑️ Cleanup script for macOS",
-	Long:  `This tool cleans up everything that is not longer needed on your system.`,
+	Short: "🗑️  Cleanup script for macOS (by github.com/fwartner)",
 }
 
 func Execute() {

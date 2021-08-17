@@ -49,7 +49,7 @@ var installPluginCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(installPluginCmd)
+	// rootCmd.AddCommand(installPluginCmd)
 	log.SetFormatter(&log.TextFormatter{})
 }
 

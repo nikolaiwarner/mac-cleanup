@@ -23,24 +23,37 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"plugin"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 type Plugin interface {
-	Clean()
+	Cleanup()
 }
 
 // cleanCmd represents the clean command
 var cleanCmd = &cobra.Command{
 	Use:   "clean",
-	Short: "A brief description of your command",
+	Short: "",
 	Run: func(cmd *cobra.Command, args []string) {
-		loadPlugins()
+		DeleteFiles("/Volumes/*/.Trashes/*")
+		DeleteFiles("~/.Trash/*")
+		DeleteFiles("/Library/Caches/*")
+		DeleteFiles("/System/Library/Caches/*")
+		DeleteFiles("~/Library/Caches/*")
+		DeleteFiles("/private/var/folders/bh/*/*/*/*")
+		DeleteFiles("/private/var/log/asl/*.asl")
+		DeleteFiles("/Library/Logs/DiagnosticReports/*")
+		DeleteFiles("/Library/Logs/CreativeCloud/*")
+		DeleteFiles("/Library/Logs/adobegc.log")
+		DeleteFiles("~/Library/Containers/com.apple.mail/Data/Library/Logs/Mail/*")
+		DeleteFiles("~/Library/Logs/CoreSimulator/*")
+
+		checkForPlugins()
 	},
 }
 
@@ -48,39 +61,88 @@ func init() {
 	rootCmd.AddCommand(cleanCmd)
 }
 
+func WalkMatch(root, pattern string) ([]string, error) {
+	var matches []string
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		if matched, err := filepath.Match(pattern, filepath.Base(path)); err != nil {
+			return err
+		} else if matched {
+			matches = append(matches, path)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return matches, nil
+}
+
+func checkForPlugins() {
+	home, _ := os.UserHomeDir()
+	root := home + "/.mac-cleanup/plugins/"
+	files, _ := WalkMatch(root, "*.so")
+	if len(files) != 0 {
+		fmt.Println("Loading plugins..")
+		loadPlugins()
+		return
+	}
+}
+
 func loadPlugins() {
 	home, _ := os.UserHomeDir()
-	err := filepath.Walk(home+"/.mac-cleanup/plugins",
-		func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-
-			execPlugin(path)
-
-			return nil
-		})
+	root := home + "/.mac-cleanup/plugins/"
+	files, err := WalkMatch(root, "*.so")
 	if err != nil {
-		log.Println(err)
+		log.Panic(err)
+	}
+	for _, file := range files {
+		execPlugin(file)
 	}
 }
 
 func execPlugin(path string) {
-
 	plug, err := plugin.Open(path)
-
-	symPlugin, err := plug.Lookup("Plugin")
 	if err != nil {
-		fmt.Println(err)
+		log.Error(err)
 		os.Exit(1)
 	}
 
-	var plugin Plugin
-	plugin, ok := symPlugin.(Plugin)
+	symPlugin, err := plug.Lookup("Cleanup")
+	if err != nil {
+		log.Error(err)
+		os.Exit(1)
+	}
+
+	cleanup, ok := symPlugin.(Plugin)
 	if !ok {
-		fmt.Println("unexpected type from module symbol")
+		log.Info("unexpected type from module symbol")
 		os.Exit(1)
 	}
 
-	plugin.Clean()
+	cleanup.Cleanup()
+}
+
+func DeleteFiles(dir string) error {
+	d, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+	names, err := d.Readdirnames(-1)
+	if err != nil {
+		return err
+	}
+	for _, name := range names {
+		err = os.RemoveAll(filepath.Join(dir, name))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
