@@ -55,3 +55,24 @@ jobs:
           args: release --rm-dist
         env:
           GITHUB_TOKEN: ${{ secrets.GO_RELEASE_TOKEN }}
+
+  homebrew:
+    name: Bump Homebrew formula
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract version
+        id: extract-version
+        run: |
+          printf "::set-output name=%s::%s\n" tag-name "${GITHUB_REF#refs/tags/}"
+      - uses: mislav/bump-homebrew-formula-action@v1
+        if: "!contains(github.ref, '-')"
+        with:
+          formula-name: mac-cleanup
+          formula-path: Formula/mac-cleanup.rb
+          homebrew-tap: mac-cleanup/homebrew-tap
+          base-branch: main
+          commit-message: |
+            {{formulaName}} {{version}}
+        env:
+          COMMITTER_TOKEN: ${{ secrets.GO_RELEASE_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GO_RELEASE_TOKEN }}
