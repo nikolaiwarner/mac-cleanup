@@ -17,10 +17,10 @@ builds:
       - amd64
       - arm64
 
-on:
-  push:
-    tags:
-      - "*"
+push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
   build:
