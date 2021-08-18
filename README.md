@@ -70,8 +70,9 @@ If you have any feedback, please reach out to us in the discussions.
   
 ## Roadmap
 
-- Finish Plugin-System
-
+- Finish plugin-system
+- Write tests
+- Cleaning up the codebase
 
   
 ## License
