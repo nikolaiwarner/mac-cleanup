@@ -56,3 +56,6 @@ changelog:
     - '^readme:'
     - '^tests?:'
     - '^\w+\s+'
+
+signs:
+  - artifacts: checksum

@@ -37,7 +37,7 @@ var installPluginCmd = &cobra.Command{
 		home, _ := os.UserHomeDir()
 		createDir(home + "/.mac-cleanup/plugins/" + args[0])
 		_, err := git.PlainClone(home+"/.mac-cleanup/plugins/"+args[0], false, &git.CloneOptions{
-			URL: "https://github.com/fwartner/" + args[0] + ".git",
+			URL: "https://github.com/" + args[0] + ".git",
 		})
 
 		if err != nil {
@@ -49,7 +49,7 @@ var installPluginCmd = &cobra.Command{
 }
 
 func init() {
-	// rootCmd.AddCommand(installPluginCmd)
+	rootCmd.AddCommand(installPluginCmd)
 	log.SetFormatter(&log.TextFormatter{})
 }
 
