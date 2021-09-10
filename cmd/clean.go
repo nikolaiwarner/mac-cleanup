@@ -26,6 +26,7 @@ import (
 	"os"
 	"path/filepath"
 	"plugin"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -34,6 +35,9 @@ import (
 type Plugin interface {
 	Cleanup()
 }
+
+var home string
+var root string
 
 // cleanCmd represents the clean command
 var cleanCmd = &cobra.Command{
@@ -53,12 +57,40 @@ var cleanCmd = &cobra.Command{
 		DeleteFiles("~/Library/Containers/com.apple.mail/Data/Library/Logs/Mail/*")
 		DeleteFiles("~/Library/Logs/CoreSimulator/*")
 
-		checkForPlugins()
+		execPlugins()
+	},
+}
+
+var execPluginCmd = &cobra.Command{
+	Use:   "run",
+	Short: "Run a single plugin",
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) > 0 {
+			pluginName := args[0]
+			file := fmt.Sprintf("%s%s/plugin.so", root, pluginName)
+			execPlugin(file)
+		} else {
+			fmt.Println("No plugin name entered.")
+			listPlugins()
+		}
+	},
+}
+
+var listPluginsCmd = &cobra.Command{
+	Use:   "ls",
+	Short: "List installed plugins",
+	Run: func(cmd *cobra.Command, args []string) {
+		listPlugins()
 	},
 }
 
 func init() {
+	home, _ = os.UserHomeDir()
+	root = home + "/.mac-cleanup/plugins/"
+
 	rootCmd.AddCommand(cleanCmd)
+	rootCmd.AddCommand(listPluginsCmd)
+	rootCmd.AddCommand(execPluginCmd)
 }
 
 func WalkMatch(root, pattern string) ([]string, error) {
@@ -83,26 +115,32 @@ func WalkMatch(root, pattern string) ([]string, error) {
 	return matches, nil
 }
 
-func checkForPlugins() {
-	home, _ := os.UserHomeDir()
-	root := home + "/.mac-cleanup/plugins/"
-	files, _ := WalkMatch(root, "*.so")
-	if len(files) != 0 {
-		fmt.Println("Loading plugins..")
-		loadPlugins()
-		return
-	}
-}
-
-func loadPlugins() {
-	home, _ := os.UserHomeDir()
-	root := home + "/.mac-cleanup/plugins/"
+func loadPlugins() ([]string) {
 	files, err := WalkMatch(root, "*.so")
 	if err != nil {
 		log.Panic(err)
 	}
-	for _, file := range files {
-		execPlugin(file)
+	return files
+}
+
+func listPlugins() {
+	plugins := loadPlugins()
+	fmt.Print("Installed plugins:\n")
+	for _, file := range plugins {
+		pluginName := strings.Split(strings.Replace(file, root, "", 1), "/") 
+		fmt.Printf("- %s\n", pluginName[0])
+	}
+}
+
+func execPlugins() {
+	files, _ := WalkMatch(root, "*.so")
+	if len(files) != 0 {
+		fmt.Println("Loading plugins...")
+		var plugins []string = loadPlugins()
+		for _, file := range plugins {
+			execPlugin(file)
+		}
+		return
 	}
 }
 
